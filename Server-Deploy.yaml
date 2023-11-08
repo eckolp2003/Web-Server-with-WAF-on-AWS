@@ -1,0 +1,75 @@
+# Create an EKS cluster
+apiVersion: eks.amazonaws.com/v1
+kind: Cluster
+metadata:
+  name: my-eks-cluster
+  namespace: default
+spec:
+  vpcConfig:
+    vpcId: <VPC_ID>
+    subnets:
+      - <SUBNET_ID_1>
+      - <SUBNET_ID_2>
+
+# Create a Deployment for the web server
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-web-server
+  namespace: default
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: my-web-server
+  template:
+    metadata:
+      labels:
+        app: my-web-server
+    spec:
+      containers:
+        - name: my-web-server
+          image: nginx:latest
+          ports:
+            - containerPort: 80
+
+# Create a Service for the web server
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-web-service
+  namespace: default
+spec:
+  selector:
+    app: my-web-server
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+      loadBalancerIP: <LOAD_BALANCER_IP>
+
+# Create a Web ACL for the WAF
+apiVersion: wafv2.amazonaws.com/v1
+kind: WebACL
+metadata:
+  name: my-web-acl
+  namespace: default
+spec:
+  defaultAction:
+    block: {}
+  rules:
+    - name: Rule1
+      priority: 0
+      action:
+        allow: {}
+      statement:
+        andStatement:
+          statements:
+            - ipSetCondition:
+                ipSetIds:
+                  - <IP_SET_ID_1>
+                type: IPSetReference
+            - byteMatchCondition:
+                positionalConstraint: Contains
+                searchString: /hello/
+                type: ByteMatchField
